@@ -9,24 +9,34 @@ public class PTP_Server {
     
     public static void main(String[] args) throws IOException {
         
+        // initializing variables
+        int id = 0;
         long time;
         byte[] buffer;
-        
+        DatagramPacket packet;
         
         // group of clients
+        System.out.println("STARTING SERVER...");
         InetAddress server = InetAddress.getLocalHost();
-        System.out.println("Server address is: " + server);
         MulticastSocket socket = new MulticastSocket(SERVER_SOCKET);
+        System.out.println("Server address is: " + server + "\n");
+        
+        // -- loop start
         
         // SYNC message multicast
-        buffer = {PTP_Shared.SYNC};
-        DatagramPacket packet = new DatagramPacket(buffer, 1, server, CLIENT_SOCKET);
+        buffer = PTP_Shared.makeMessage(PTP_Shared.SYNC, id++); // ID incremented!
+        packet = new DatagramPacket(buffer, 5, server, CLIENT_SOCKET);
         time = System.currentTimeMillis();
         socket.send(packet);
+        System.out.println("SYNC packet sent, size " + (buffer.length) + " bytes");
         
         // FOLLOW_UP message multicast
-        buffer = new byte[9];
-        buffer[0] = PTP_Shared.FOLLOW_UP;
+        buffer = PTP_Shared.makeTimeMessage(PTP_Shared.FOLLOW_UP, id, time);
+        packet = new DatagramPacket(buffer, 13, server, CLIENT_SOCKET);
+        socket.send(packet);
+        System.out.println("FOLLOW_UP packet sent, size " + (buffer.length) + " bytes");
+        
+        // -- loop end
         
         // after end of main loop
         socket.close();
