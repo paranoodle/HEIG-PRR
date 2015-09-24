@@ -17,9 +17,8 @@ public class PTP_Client {
         byte[] buffer = ByteBuffer.allocate(5).array();
         long time;
 
-        DatagramSocket socket = new DatagramSocket();
         MulticastSocket socket = new MulticastSocket(4445);
-        InetAddress group = InetAddress.getByAddress(ipAddress);
+        InetAddress group = InetAddress.getByName(ipAddress);
         socket.joinGroup(group);
 
         // On attend un SYNC
@@ -36,7 +35,7 @@ public class PTP_Client {
         buffer = ByteBuffer.allocate(13).array();
         byte type_2 = PTP_Shared.getMessageType(buffer);
         int id_2 = PTP_Shared.getMessageID(buffer);
-        DatagramPacket packet = new DatagramPacket(buffer,buffer.length);
+        packet = new DatagramPacket(buffer,buffer.length);
         socket.receive(packet);// méthode bloquante !
         byte[] data_2 = packet.getData();
         System.out.println("Message of type " + type + "recieved, ID :" + id);
@@ -47,10 +46,11 @@ public class PTP_Client {
             long timeOfMaster = PTP_Shared.getMessageTime(buffer);
             long timeOfSlave = System.currentTimeMillis();
             long delay = timeOfMaster - timeOfSlave;
-            byte[] delay_response = PTP_Shared.makeTimeMessage(3, id, delay);
+            byte[] delay_request = PTP_Shared.makeTimeMessage(PTP_Shared.DELAY_REQUEST, id, delay);
             DatagramPacket packetToSend = new DatagramPacket(buffer, 13, group, 4446);
         }
-
+        //TODO : loop
+        // part2:
 
         socket.leaveGroup(group);
         socket.close();
