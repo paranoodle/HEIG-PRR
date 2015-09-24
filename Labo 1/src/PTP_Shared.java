@@ -9,6 +9,9 @@ public class PTP_Shared {
     public static final int MESSAGE_SIZE = 5;
     public static final int TIME_MESSAGE_SIZE = 13;
     
+    public static final int SERVER_SOCKET = 4446;
+    public static final int CLIENT_SOCKET = 4445;
+    
     public static byte[] makeMessage(byte type, int id) {
         ByteBuffer bb = ByteBuffer.allocate(MESSAGE_SIZE);
         bb.put(type);

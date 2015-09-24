@@ -4,8 +4,6 @@ import java.lang.*;
 
 public class PTP_Server {
     
-    private static final int SERVER_SOCKET = 4446;
-    private static final int CLIENT_SOCKET = 4445;
     private static final int MULTICAST_DELAY = 1000;
     
     public static void main(String[] args) throws IOException {
@@ -26,20 +24,20 @@ public class PTP_Server {
                     // multicast set-up
                     System.out.println("STARTING MULTICAST SERVER...");
                     InetAddress server = InetAddress.getLocalHost();
-                    MulticastSocket socket = new MulticastSocket(SERVER_SOCKET);
+                    MulticastSocket socket = new MulticastSocket(PTP_Shared.SERVER_SOCKET);
                     System.out.println("Multicast server address is: " + server + "\n");
                 
                     while(!end) {
                         // SYNC message multicast
                         buffer = PTP_Shared.makeMessage(PTP_Shared.SYNC, id++); // ID incremented!
-                        packet = new DatagramPacket(buffer, 5, server, CLIENT_SOCKET);
+                        packet = new DatagramPacket(buffer, 5, server, PTP_Shared.CLIENT_SOCKET);
                         time = System.currentTimeMillis();
                         socket.send(packet);
                         System.out.println("SYNC packet sent");
                         
                         // FOLLOW_UP message multicast
                         buffer = PTP_Shared.makeTimeMessage(PTP_Shared.FOLLOW_UP, id, time);
-                        packet = new DatagramPacket(buffer, 13, server, CLIENT_SOCKET);
+                        packet = new DatagramPacket(buffer, 13, server, PTP_Shared.CLIENT_SOCKET);
                         socket.send(packet);
                         System.out.println("FOLLOW_UP packet sent");
                         
@@ -72,7 +70,7 @@ public class PTP_Server {
                 try {
                     // response set-up
                     System.out.println("STARTING RESPONSE THREAD...");
-                    DatagramSocket socket = new DatagramSocket(CLIENT_SOCKET);
+                    DatagramSocket socket = new DatagramSocket(PTP_Shared.CLIENT_SOCKET);
                     
                     while(!end) {
                         buffer = new byte[PTP_Shared.MESSAGE_SIZE];
