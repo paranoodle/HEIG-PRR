@@ -6,15 +6,18 @@ public class PTP_Shared {
     public static final byte DELAY_REQUEST = 2;
     public static final byte DELAY_RESPONSE = 3;
     
+    public static final int MESSAGE_SIZE = 5;
+    public static final int TIME_MESSAGE_SIZE = 13;
+    
     public static byte[] makeMessage(byte type, int id) {
-        ByteBuffer bb = ByteBuffer.allocate(5);
+        ByteBuffer bb = ByteBuffer.allocate(MESSAGE_SIZE);
         bb.put(type);
         bb.putInt(id);
         return bb.array();
     }
     
     public static byte[] makeTimeMessage(byte type, int id, long time) {
-        ByteBuffer bb = ByteBuffer.allocate(13);
+        ByteBuffer bb = ByteBuffer.allocate(TIME_MESSAGE_SIZE);
         bb.put(type);
         bb.putInt(id);
         bb.putLong(time);
