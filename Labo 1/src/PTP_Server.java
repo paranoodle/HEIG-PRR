@@ -47,16 +47,44 @@ public class PTP_Server {
         // handles responding to delay messages
         Thread response = new Thread() {
             public void run() {
+                // initializing variables
+                int id;
+                long time;
+                byte[] buffer;
+                DatagramPacket packet;
+                InetAddress client;
+                int port;
+                
                 System.out.println("STARTING RESPONSE THREAD...");
                 DatagramSocket socket = new DatagramSocket(CLIENT_SOCKET);
                 
                 while(true) {
-                    DatagramPacket packet = new DatagramPacket();
+                    buffer = new byte[PTP_Shared.MESSAGE_SIZE];
+                    packet = new DatagramPacket(buffer, buffer.length);
+                    
+                    // DELAY_REQUEST reception
+                    socket.receive(packet);
+                    time = System.currentTimeMillis();
+                    
+                    if (PTP_Shared.getMessageType(packet.getData()) == PTP_Shared.DELAY_REQUEST) {
+                        id = PTP_Shared.getMessageID(packet.getData());
+                        client = packet.getAddress();
+                        port = packet.getPort();
+                        System.out.println("Received delay_request packet #" + id + " from " + client + ":" + port);
+                        
+                        // DELAY_RESPONSE emission
+                        buffer = PTP_Shared.makeTimeMessage(PTP_Shared.DELAY_RESPONSE, id, time);
+                        packet = new DatagramPacket(buffer, buffer.length, client, port);
+                        socket.send(packet);
+                        System.out.println("Sent delay_response #" + id + " to " + client + ":" + port);
+                    }
                 }
+                
+                socket.close();
             }
         }
         
-        multicast.start();
         response.start();
+        multicast.start();
     }
 }
