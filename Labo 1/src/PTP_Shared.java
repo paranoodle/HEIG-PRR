@@ -16,10 +16,12 @@ public class PTP_Shared {
     // Taille en bytes des messages
     public static final int MESSAGE_SIZE = 5;
     public static final int TIME_MESSAGE_SIZE = 13;
-    
+
     // Ports utilisés par les sockets
-    public static final int SERVER_SOCKET = 4446;
-    public static final int CLIENT_SOCKET = 4445;
+    public static final int SERVER_PORT= 4446;
+    public static final int CLIENT_PORT = 4445;
+    public static final int MULTICAST_CLIENT_PORT = 4447;
+    public static final int MULTICAST_SERVER_PORT = 4448;
     
     /**
      * Fabrique un tableau de bytes contenant un type de message
