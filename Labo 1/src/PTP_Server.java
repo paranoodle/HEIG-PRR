@@ -39,7 +39,7 @@ public class PTP_Server {
                         buffer = PTP_Shared.makeTimeMessage(PTP_Shared.FOLLOW_UP, id, time);
                         packet = new DatagramPacket(buffer, 13, server, PTP_Shared.CLIENT_SOCKET);
                         socket.send(packet);
-                        System.out.println("FOLLOW_UP packet sent");
+                        System.out.println("FOLLOW_UP packet sent, time was " + time);
                         
                         Thread.sleep(MULTICAST_DELAY);
                     }
@@ -50,8 +50,6 @@ public class PTP_Server {
                     System.out.println("ERROR IN MULTICAST THREAD");
                     return;
                 }
-                
-                //socket.close();
             }
         };
         

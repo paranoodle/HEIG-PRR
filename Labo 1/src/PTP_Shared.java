@@ -36,6 +36,10 @@ public class PTP_Shared {
     }
     
     public static long getMessageTime(byte[] array) {
-        return ByteBuffer.wrap(array).getLong(5);
+        if (array.length == 13) return ByteBuffer.wrap(array).getLong(5);
+        else {
+            System.out.println("Error: Attempted to get message time when unavailable");
+            return (long) 0;
+        }
     }
 }
