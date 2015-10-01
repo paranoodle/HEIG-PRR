@@ -28,7 +28,7 @@ public class PTP_Server {
                     // Set-up du socket multicast pour l'envoi
                     System.out.println("STARTING MULTICAST THREAD...");
                     InetAddress server = InetAddress.getLocalHost();
-                    MulticastSocket socket = new MulticastSocket(PTP_Shared.SERVER_SOCKET);
+                    MulticastSocket socket = new MulticastSocket(PTP_Shared.MULTICAST_SERVER_PORT);
                     System.out.println("Multicast server address is: " + server + "\n");
                 
                     // Boucle principale du thread
@@ -36,12 +36,12 @@ public class PTP_Server {
                         // Multicast de SYNC (avec incrémentation de l'identifiant
                         time = System.currentTimeMillis();
                         socket.send(new DatagramPacket(PTP_Shared.makeMessage(PTP_Shared.SYNC, id++),
-                                        PTP_Shared.MESSAGE_SIZE, server, PTP_Shared.CLIENT_SOCKET));
+                                        PTP_Shared.MESSAGE_SIZE, server, PTP_Shared.MULTICAST_CLIENT_PORT));
                         System.out.println("SYNC packet sent");
                         
                         // Multicast de FOLLOW_UP avec le timestamp obtenu précedemment
                         socket.send(new DatagramPacket(PTP_Shared.makeTimeMessage(PTP_Shared.FOLLOW_UP, id, time),
-                                        PTP_Shared.TIME_MESSAGE_SIZE, server, PTP_Shared.CLIENT_SOCKET));
+                                        PTP_Shared.TIME_MESSAGE_SIZE, server, PTP_Shared.MULTICAST_CLIENT_PORT));
                         System.out.println("FOLLOW_UP packet sent, time was " + time);
                         
                         Thread.sleep(MULTICAST_DELAY);
@@ -63,7 +63,7 @@ public class PTP_Server {
                 // initializing variables
                 int id;
                 long time;
-                byte[] inputBuffer;
+                byte[] buffer;
                 DatagramPacket packet;
                 InetAddress client;
                 int port;
@@ -71,12 +71,12 @@ public class PTP_Server {
                 try {
                     // Set-up du socket pour l'envoi et la récéption de messages
                     System.out.println("STARTING RESPONSE THREAD...");
-                    DatagramSocket socket = new DatagramSocket(PTP_Shared.CLIENT_SOCKET);
+                    DatagramSocket socket = new DatagramSocket(PTP_Shared.CLIENT_PORT);
                     
                     // Boucle principale du thread
                     while(!end) {
-                        inputBuffer = new byte[PTP_Shared.MESSAGE_SIZE];
-                        packet = new DatagramPacket(inputBuffer, inputBuffer.length);
+                        buffer = new byte[PTP_Shared.MESSAGE_SIZE];
+                        packet = new DatagramPacket(buffer, buffer.length);
                         
                         // Réception du message
                         socket.receive(packet);
