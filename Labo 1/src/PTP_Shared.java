@@ -7,6 +7,9 @@ import java.nio.ByteBuffer;
  */
 public class PTP_Shared {
     
+    // L'attente entre deux envois du temps courant
+    private static final int MULTICAST_DELAY = 1000;
+    
     // Codes des différents types de messages
     public static final byte SYNC = 0;
     public static final byte FOLLOW_UP = 1;

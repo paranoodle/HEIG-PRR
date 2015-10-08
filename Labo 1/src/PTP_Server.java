@@ -8,10 +8,6 @@ import java.lang.*;
  *   2. Une thread qui répond aux requêtes de delay des esclaves
  */
 public class PTP_Server {
-    
-    // L'attente entre deux envois du temps courant
-    private static final int MULTICAST_DELAY = 1000;
-    
     public static void main(String[] args) throws IOException {
         
         // Gère l'arrêt du maître
@@ -44,7 +40,7 @@ public class PTP_Server {
                                         PTP_Shared.TIME_MESSAGE_SIZE, server, PTP_Shared.MULTICAST_CLIENT_PORT));
                         System.out.println("FOLLOW_UP packet sent, time was " + time);
                         
-                        Thread.sleep(MULTICAST_DELAY);
+                        Thread.sleep(PTP_Shared.MULTICAST_DELAY);
                     }
                     
                     socket.close();
