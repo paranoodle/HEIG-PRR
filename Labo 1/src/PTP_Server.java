@@ -17,6 +17,7 @@ public class PTP_Server {
         Thread multicast = new Thread() {
             public void run() {
                 
+                // Initialization des variables
                 int id = 0;
                 long time;
                 
@@ -31,14 +32,14 @@ public class PTP_Server {
                     while(!end) {
                         // Multicast de SYNC (avec incrémentation de l'identifiant
                         time = System.currentTimeMillis();
-                        socket.send(new DatagramPacket(PTP_Shared.makeMessage(PTP_Shared.SYNC, id++),
+                        socket.send(new DatagramPacket(PTP_Shared.makeMessage(PTP_Shared.SYNC, ++id),
                                         PTP_Shared.MESSAGE_SIZE, server, PTP_Shared.MULTICAST_CLIENT_PORT));
-                        System.out.println("SYNC packet sent");
+                        System.out.println("ID " + id + " SYNC packet sent");
                         
                         // Multicast de FOLLOW_UP avec le timestamp obtenu précedemment
                         socket.send(new DatagramPacket(PTP_Shared.makeTimeMessage(PTP_Shared.FOLLOW_UP, id, time),
                                         PTP_Shared.TIME_MESSAGE_SIZE, server, PTP_Shared.MULTICAST_CLIENT_PORT));
-                        System.out.println("FOLLOW_UP packet sent, time was " + time);
+                        System.out.println("ID " + id + " FOLLOW_UP packet sent, time was " + time);
                         
                         Thread.sleep(PTP_Shared.MULTICAST_DELAY);
                     }
@@ -56,7 +57,7 @@ public class PTP_Server {
         Thread response = new Thread() {
             public void run() {
                 
-                // initializing variables
+                // Initialization des variables
                 int id;
                 long time;
                 byte[] buffer;
@@ -67,14 +68,13 @@ public class PTP_Server {
                 try {
                     // Set-up du socket pour l'envoi et la récéption de messages
                     System.out.println("STARTING RESPONSE THREAD...");
-                    DatagramSocket socket = new DatagramSocket(PTP_Shared.CLIENT_PORT);
+                    DatagramSocket socket = new DatagramSocket(PTP_Shared.SERVER_PORT);
                     
                     // Boucle principale du thread
                     while(!end) {
+                        // Réception du message
                         buffer = new byte[PTP_Shared.MESSAGE_SIZE];
                         packet = new DatagramPacket(buffer, buffer.length);
-                        
-                        // Réception du message
                         socket.receive(packet);
                         time = System.currentTimeMillis();
                         
@@ -85,13 +85,13 @@ public class PTP_Server {
                             id = PTP_Shared.getMessageID(packet.getData());
                             client = packet.getAddress();
                             port = packet.getPort();
-                            System.out.println("Received delay_request packet #" + id + " from " + client + ":" + port);
+                            System.out.println("Received DELAY_REQUEST packet #" + id + " from " + client + ":" + port);
                             
                             // Envoi de DELAY_RESPONSE avec l'id du DELAY_REQUEST
                             // ainsi que le timestamp de sa réception
                             socket.send(new DatagramPacket(PTP_Shared.makeTimeMessage(PTP_Shared.DELAY_RESPONSE, id, time),
                                             PTP_Shared.TIME_MESSAGE_SIZE, client, port));
-                            System.out.println("Sent delay_response #" + id + " to " + client + ":" + port);
+                            System.out.println("Sent DELAY_RESPONSE #" + id + " to " + client + ":" + port);
                         }
                     }
                     

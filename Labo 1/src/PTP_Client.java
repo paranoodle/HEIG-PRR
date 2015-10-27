@@ -15,67 +15,181 @@ public class PTP_Client {
             System.out.println("IP Address of server is missing !");
             System.exit(-1); // TODO
         }
-        String ipAddress = args[0];
-        byte[] buffer = ByteBuffer.allocate(PTP_Shared.MESSAGE_SIZE).array();
-        long time;
-
-        MulticastSocket socket = new MulticastSocket(PTP_Shared.MULTICAST_CLIENT_PORT);
-        InetAddress group = InetAddress.getByName(ipAddress);
-    //    socket.joinGroup(group);
-
-        // On attend un SYNC
-        DatagramPacket packet = new DatagramPacket(buffer,buffer.length);
-        socket.receive(packet);// méthode bloquante !
-        byte[] data = packet.getData();
-        ByteBuffer bb = ByteBuffer.wrap(data);
-        byte type = PTP_Shared.getMessageType(buffer);
-        int id = PTP_Shared.getMessageID(buffer);
-        System.out.println("Message of type " + type + " recieved, ID : " + id);
-        // on récupère le temps où le sync a été reçu
-        long ti = System.currentTimeMillis();
-
-        // On attend le Follow up correspondant
-        buffer = ByteBuffer.allocate(PTP_Shared.TIME_MESSAGE_SIZE).array();
-        byte type_2 = PTP_Shared.getMessageType(buffer);
-        int id_2 = PTP_Shared.getMessageID(buffer);
-        packet = new DatagramPacket(buffer,buffer.length);
-        socket.receive(packet);// méthode bloquante !
-        //byte[] data_2 = packet.getData();
-        System.out.println("Message of type " + type_2 + " recieved, ID : " + id_2);
-
-        // on vérifie que l'id est bien le même, on récupère le temps
-        if(id == id_2){
-            // on calcule l'écart, et on envoie un message delay_request
-            long timeOfMaster = PTP_Shared.getMessageTime(buffer);
-            long timeOfSlave = System.currentTimeMillis();
-            long delay = timeOfMaster - timeOfSlave;
-
-        }
-        Random r = new Random();
-        int randomWaitingTime = ( Math.max(PTP_Shared.LOWERBOUND, r.nextInt(PTP_Shared.UPPERBOUND + 1) ) ) * PTP_Shared.MULTICAST_DELAY ; //random Time between 4k and 60k
-        int delayRequestID = r.nextInt(1000);
-
-        //l'esclave débute la seconde étape après un temps aléatoire tiré de l'intervalle [4k,60k]
-        try{
-            Thread.sleep(randomWaitingTime);
-        } catch (Exception e) {
-            System.out.println("ERROR WHILE SLAVE IS RANDOMLY WAITING");
-            return;
-        }
-        byte[] delay_request = PTP_Shared.makeMessage(PTP_Shared.DELAY_REQUEST, delayRequestID);
-        DatagramPacket packetToSend = new DatagramPacket(buffer, PTP_Shared.MESSAGE_SIZE, group, PTP_Shared.SERVER_PORT);
-
-        //on attend le delay_response
-        buffer = ByteBuffer.allocate(PTP_Shared.TIME_MESSAGE_SIZE).array();
-        byte type_3 = PTP_Shared.getMessageType(buffer);
-        int id_3 = PTP_Shared.getMessageID(buffer);
-        packet = new DatagramPacket(buffer,buffer.length);
-        socket.receive(packet);// méthode bloquante !
-        System.out.println("Message of type " + type_3 + " recieved, ID : " + id_3);
-
-
-
-        socket.leaveGroup(group);
-        socket.close();
+        
+        String serverIP = args[0];
+        InetAddress server = InetAddress.getByName(serverIP);
+        
+        boolean end = false;
+        
+        Thread client = new Thread() {
+            public void run() {
+                // Initialization des variables
+                byte[] buffer;
+                DatagramPacket packet;
+                int sync_id, delay_id;
+                long sync_receive_time, sync_emit_time, delay_request_time, delay_response_time;
+                long offset = 0;
+                long delay = 0;
+                long time = 0;
+                
+                try {
+                    // Set-up du socket multicast pour la récéption
+                    MulticastSocket multi_socket = new MulticastSocket(PTP_Shared.MULTICAST_CLIENT_PORT);
+                    // TODO: finir?
+                    
+                    // Set-up du socket pour l'envoi et la récéption de messages de delay
+                    DatagramSocket delay_socket = new DatagramSocket(PTP_Shared.CLIENT_PORT);
+                    
+                    // Boucle principale du thread
+                    while(!end) {
+                        // On attend le message SYNC
+                        buffer = new byte[PTP_Shared.MESSAGE_SIZE];
+                        packet = new DatagramPacket(buffer, buffer.length);
+                        multi_socket.receive(packet);
+                        sync_receive_time = System.currentTimeMillis();
+                        
+                        // On ignore les messages autre que SYNC
+                        if (PTP_Shared.getMessageType(packet.getData()) != PTP_Shared.SYNC)
+                            continue;
+                        
+                        // On extrait les données du packet
+                        sync_id = PTP_Shared.getMessageID(packet.getData());
+                        System.out.println("Received ID " + sync_id + " SYNC message at time " + sync_receive_time);
+                        
+                        // On attend le message FOLLOW_UP
+                        buffer = new byte[PTP_Shared.TIME_MESSAGE_SIZE];
+                        packet = new DatagramPacket(buffer, buffer.length);
+                        multi_socket.receive(packet);
+                                                
+                        // Si le message n'est pas un FOLLOW_UP, on recommence
+                        if (PTP_Shared.getMessageType(packet.getData()) != PTP_Shared.FOLLOW_UP)
+                            continue;
+                        
+                        // Si l'id du FOLLOW_UP ne correspond pas à celle du SYNC, on recommence
+                        if (sync_id != PTP_Shared.getMessageID(packet.getData()))
+                            continue;
+                        
+                        // On extrait les données du packet et on fait les calculs
+                        System.out.println("Received ID " + sync_id + " FOLLOW_UP message");
+                        sync_emit_time = PTP_Shared.getMessageTime(packet.getData());
+                        offset = sync_receive_time - sync_emit_time;
+                        System.out.println("Calculated new offset of " + offset + "ms");
+                        
+                        // On attend avant d'envoyer le message DELAY_REQUEST
+                        // TODO: mettre les vraies valeurs
+                        Thread.sleep(4000);
+                        delay_id = 137;
+                        
+                        // Envoi de DELAY_REQUEST avec notre id
+                        delay_request_time = System.currentTimeMillis();
+                        delay_socket.send(new DatagramPacket(PTP_Shared.makeMessage(PTP_Shared.DELAY_REQUEST, delay_id),
+                                        PTP_Shared.MESSAGE_SIZE, server, PTP_Shared.SERVER_PORT));
+                        System.out.println("Sent DELAY_REQUEST packet #" + delay_id + " at time " + delay_request_time);
+                        
+                        // Réception de DELAY_RESPONSE
+                        buffer = new byte[PTP_Shared.TIME_MESSAGE_SIZE];
+                        packet = new DatagramPacket(buffer, buffer.length);
+                        delay_socket.receive(packet);
+                        
+                        // Si on a pas reçu un DELAY_RESPONSE, on recommence:
+                        if (PTP_Shared.getMessageType(packet.getData()) != PTP_Shared.DELAY_RESPONSE)
+                            continue;
+                            
+                        // Si la réponse n'a pas le bon id, on recommence:
+                        if (PTP_Shared.getMessageID(packet.getData()) != delay_id)
+                            continue;
+                            
+                        // On extrait les données du packet et on fait les calculs
+                        System.out.println("Received DELAY_RESPONSE packet #" + delay_id);
+                        delay_response_time = PTP_Shared.getMessageTime(packet.getData());
+                        delay = (delay_response_time - delay_request_time) / 2;
+                        System.out.println("Calculated new delay of " + delay + "ms");
+                        
+                        // On affiche "l'heure"
+                        time = System.currentTimeMillis();
+                        long adj = time + offset + delay;
+                        System.out.println("-- Current time is " + time + " before adjusting");
+                        System.out.println("-- Current time is " + adj + " after adjusting");
+                    }
+                    
+                    multi_socket.close();
+                    delay_socket.close();
+                    
+                } catch (Exception e) {
+                    System.out.println("ERROR IN CLIENT THREAD");
+                    return;
+                }
+            }
+        };
+        
+        Thread request = new Thread() {
+            public void run() {
+                // Initialization des variables
+                int delay_id;
+                long delay_request_time, delay_response_time;
+                byte[] buffer;
+                DatagramPacket packet;
+                
+                try {
+                    // Set-up du socket pour l'envoi et la récéption de messages
+                    DatagramSocket socket = new DatagramSocket(PTP_Shared.CLIENT_PORT);
+                    
+                    // Boucle principale du thread
+                    while(!end) {
+                        // On attend avant d'envoyer le message DELAY_REQUEST
+                        Thread.sleep(4000);
+                        delay_id = 137;
+                        
+                        // Envoi de DELAY_REQUEST avec notre id
+                        delay_request_time = System.currentTimeMillis();
+                        socket.send(new DatagramPacket(PTP_Shared.makeMessage(PTP_Shared.DELAY_REQUEST, delay_id),
+                                        PTP_Shared.MESSAGE_SIZE, server, PTP_Shared.SERVER_PORT));
+                        System.out.println("Sent DELAY_REQUEST packet #" + delay_id + " at time " + delay_request_time);
+                        
+                        // Réception de DELAY_RESPONSE
+                        buffer = new byte[PTP_Shared.TIME_MESSAGE_SIZE];
+                        packet = new DatagramPacket(buffer, buffer.length);
+                        socket.receive(packet);
+                        
+                        // Si on a pas reçu un DELAY_RESPONSE, on recommence:
+                        if (PTP_Shared.getMessageType(packet.getData()) != PTP_Shared.DELAY_RESPONSE)
+                            continue;
+                            
+                        // Si la réponse n'a pas le bon id, on recommence:
+                        if (PTP_Shared.getMessageID(packet.getData()) != delay_id)
+                            continue;
+                            
+                        // On extrait les données du packet et on fait les calculs
+                        System.out.println("Received DELAY_RESPONSE message");
+                        delay_response_time = PTP_Shared.getMessageTime(packet.getData());
+                        //delay = (delay_response_time - delay_request_time) / 2;
+                        //System.out.println("Calculated new delay of " + delay + "ms");
+                    }
+                } catch (Exception e) {
+                    System.out.println("ERROR IN REQUEST THREAD");
+                    return;
+                }
+            }
+        };
+        
+        Thread current_time = new Thread() {
+            public void run() {
+                try {
+                    while(!end) {
+                        //time = System.currentTimeMillis();
+                        //long adj = time + offset + delay;
+                        //System.out.println("-- Current time is " + time + " before adjusting");
+                        //System.out.println("-- Current time is " + adj + " after adjusting");
+                        Thread.sleep(2000);
+                    }
+                } catch (Exception e) {}
+            }
+        };
+        
+        // On démarre les trois threads
+        client.start();
+        //current_time.start();
+        //multicast.start();
+        //request.start();
     }
 }
