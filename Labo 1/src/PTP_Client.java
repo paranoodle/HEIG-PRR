@@ -13,7 +13,7 @@ public class PTP_Client {
     public static void main(String args[]) throws IOException{
         if(args.length < 1){
             System.out.println("IP Address of server is missing !");
-            System.exit(-1); // TODO
+            System.exit(-1);
         }
         
         String serverIP = args[0];
@@ -33,15 +33,16 @@ public class PTP_Client {
                 long time = 0;
                 
                 try {
-                    // Set-up du socket multicast pour la récéption
                     MulticastSocket multi_socket = new MulticastSocket(PTP_Shared.MULTICAST_CLIENT_PORT);
-                    // TODO: finir?
-                    
                     // Set-up du socket pour l'envoi et la récéption de messages de delay
                     DatagramSocket delay_socket = new DatagramSocket(PTP_Shared.CLIENT_PORT);
                     
                     // Boucle principale du thread
                     while(!end) {
+                        // Set-up du socket multicast pour la récéption
+                        if (multi_socket.isClosed())
+                            multi_socket = new MulticastSocket(PTP_Shared.MULTICAST_CLIENT_PORT);
+                        
                         // On attend le message SYNC
                         buffer = new byte[PTP_Shared.MESSAGE_SIZE];
                         packet = new DatagramPacket(buffer, buffer.length);
@@ -75,10 +76,14 @@ public class PTP_Client {
                         offset = sync_receive_time - sync_emit_time;
                         System.out.println("Calculated new offset of " + offset + "ms");
                         
+                        // On ferme le socket, on ne veut pas recevoir d'autres messages avant de finir
+                        // de gérer les DELAY_REQUEST et DELAY_RESPONSE
+                        multi_socket.close();
+                        
                         // On attend avant d'envoyer le message DELAY_REQUEST
                         // TODO: mettre les vraies valeurs
-                        Thread.sleep(4000);
-                        delay_id = 137;
+                        Thread.sleep((int)(Math.random() * 56 + 4) * PTP_Shared.MULTICAST_DELAY);
+                        delay_id = (int)(Math.random() * 1000);
                         
                         // Envoi de DELAY_REQUEST avec notre id
                         delay_request_time = System.currentTimeMillis();

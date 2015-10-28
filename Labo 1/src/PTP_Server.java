@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.*;
 import java.lang.*;
+import java.util.*;
 
 /**
  * Classe qui gère toute la partie du maître. Elle contient 2 threads:
@@ -22,11 +23,28 @@ public class PTP_Server {
                 long time;
                 
                 try {
+                    // Obtention de l'addresse IP
+                    InetAddress server = null;
+                    Enumeration en = NetworkInterface.getNetworkInterfaces();
+                    while(en.hasMoreElements()) {
+                        NetworkInterface ni=(NetworkInterface) en.nextElement();
+                        Enumeration ee = ni.getInetAddresses();
+                        while(ee.hasMoreElements()) {
+                            InetAddress ia = (InetAddress) ee.nextElement();
+                            if (ia.getHostAddress().contains("192.168."))
+                                server = ia;
+                        }
+                    }
+                    
+                    if (server == null) {
+                        System.out.println("ERROR: Unable to obtain server address");
+                        System.exit(-1);
+                    }
+                    
                     // Set-up du socket multicast pour l'envoi
-                    System.out.println("STARTING MULTICAST THREAD...");
-                    InetAddress server = InetAddress.getLocalHost();
-                    MulticastSocket socket = new MulticastSocket(PTP_Shared.MULTICAST_SERVER_PORT);
                     System.out.println("Multicast server address is: " + server + "\n");
+                    System.out.println("STARTING MULTICAST THREAD...");
+                    MulticastSocket socket = new MulticastSocket(PTP_Shared.MULTICAST_SERVER_PORT);
                 
                     // Boucle principale du thread
                     while(!end) {
