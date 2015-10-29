@@ -42,8 +42,10 @@ public class PTP_Client {
                     // Boucle principale du thread
                     while(!end) {
                         // Set-up du socket multicast pour la récéption
-                        if (multi_socket.isClosed())
+                        if (multi_socket.isClosed()) {
                             multi_socket = new MulticastSocket(PTP_Shared.MULTICAST_CLIENT_PORT);
+                            multi_socket.joinGroup(groupe);
+                        }
                         
                         // On attend le message SYNC
                         buffer = new byte[PTP_Shared.MESSAGE_SIZE];
