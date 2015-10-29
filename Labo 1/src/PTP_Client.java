@@ -11,13 +11,13 @@ import java.util.Random;
 
 public class PTP_Client {
     public static void main(String args[]) throws IOException{
-        if(args.length < 1){
+        /*if(args.length < 1){
             System.out.println("IP Address of server is missing !");
             System.exit(-1);
         }
         
-        String serverIP = args[0];
-        InetAddress server = InetAddress.getByName(serverIP);
+        String serverIP = args[0];*/
+        InetAddress server = InetAddress.getByName(PTP_Shared.MULTICAST_IP);
         
         boolean end = false;
         
@@ -34,6 +34,7 @@ public class PTP_Client {
                 
                 try {
                     MulticastSocket multi_socket = new MulticastSocket(PTP_Shared.MULTICAST_CLIENT_PORT);
+                    multi_socket.joinGroup(server);
                     // Set-up du socket pour l'envoi et la récéption de messages de delay
                     DatagramSocket delay_socket = new DatagramSocket(PTP_Shared.CLIENT_PORT);
                     
@@ -121,7 +122,7 @@ public class PTP_Client {
                     delay_socket.close();
                     
                 } catch (Exception e) {
-                    System.out.println("ERROR IN CLIENT THREAD");
+                    System.out.println("ERROR IN CLIENT THREAD: " + e.getMessage());
                     return;
                 }
             }

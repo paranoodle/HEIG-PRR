@@ -28,6 +28,9 @@ public class PTP_Shared {
     public static final int MULTICAST_CLIENT_PORT = 4447;
     public static final int MULTICAST_SERVER_PORT = 4448;
     
+    // Addresse IP pour le multicast
+    public static final int MULTICAST_IP = "228.5.6.7";
+    
     /**
      * Fabrique un tableau de bytes contenant un type de message
      * ansi qu'un identifiant, prêt à l'envoi par datagram.
