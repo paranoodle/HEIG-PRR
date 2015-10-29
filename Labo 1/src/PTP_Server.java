@@ -31,7 +31,7 @@ public class PTP_Server {
                         Enumeration ee = ni.getInetAddresses();
                         while(ee.hasMoreElements()) {
                             InetAddress ia = (InetAddress) ee.nextElement();
-                            if (ia.getHostAddress().contains("192.168."))
+                            if (ni.getName().equals("wlan0") && !ia.getHostAddress().contains(":"))
                                 server = ia;
                         }
                     }
