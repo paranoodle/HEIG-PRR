@@ -5,8 +5,8 @@ import java.util.*;
 
 /**
  * Classe qui gère toute la partie du maître. Elle contient 2 threads:
- *   1. Une thread qui gère l'envoi du temps courant à intervalle régulière
- *   2. Une thread qui répond aux requêtes de delay des esclaves
+ *   1. Un thread qui gère l'envoi du temps courant à intervalle régulier
+ *   2. Un thread qui répond aux requêtes de delay des esclaves
  */
 public class PTP_Server {
     public static void main(String[] args) throws IOException {
@@ -18,7 +18,7 @@ public class PTP_Server {
         Thread multicast = new Thread() {
             public void run() {
                 
-                // Initialization des variables
+                // Initialisation des variables
                 int id = 0;
                 long time;
                 
@@ -48,7 +48,7 @@ public class PTP_Server {
                 
                     // Boucle principale du thread
                     while(!end) {
-                        // Multicast de SYNC (avec incrémentation de l'identifiant
+                        // Multicast de SYNC (avec incrémentation de l'identifiant)
                         time = System.currentTimeMillis();
                         socket.send(new DatagramPacket(PTP_Shared.makeMessage(PTP_Shared.SYNC, ++id),
                                         PTP_Shared.MESSAGE_SIZE, server, PTP_Shared.MULTICAST_CLIENT_PORT));

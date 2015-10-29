@@ -23,7 +23,7 @@ public class PTP_Client {
         
         Thread client = new Thread() {
             public void run() {
-                // Initialization des variables
+                // Initialisation des variables
                 byte[] buffer;
                 DatagramPacket packet;
                 int sync_id, delay_id;
@@ -96,7 +96,7 @@ public class PTP_Client {
                         packet = new DatagramPacket(buffer, buffer.length);
                         delay_socket.receive(packet);
                         
-                        // Si on a pas reçu un DELAY_RESPONSE, on recommence:
+                        // Si on n'a pas reçu un DELAY_RESPONSE, on recommence:
                         if (PTP_Shared.getMessageType(packet.getData()) != PTP_Shared.DELAY_RESPONSE)
                             continue;
                             
