@@ -83,6 +83,7 @@ public class PTP_Client {
                         
                         // On ferme le socket, on ne veut pas recevoir d'autres messages avant de finir
                         // de gérer les DELAY_REQUEST et DELAY_RESPONSE
+                        multi_socket.leaveGroup(groupe);
                         multi_socket.close();
                         
                         // On attend avant d'envoyer le message DELAY_REQUEST
