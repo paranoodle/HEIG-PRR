@@ -31,7 +31,9 @@ public class PTP_Server {
                         Enumeration ee = ni.getInetAddresses();
                         while(ee.hasMoreElements()) {
                             InetAddress ia = (InetAddress) ee.nextElement();
-                            if (ni.getName().equals("wlan0") && !ia.getHostAddress().contains(":"))
+                            if (!ni.getName().contains("docker") &&
+                                !ni.getName().contains("lo") &&
+                                !ia.getHostAddress().contains(":"))
                                 server = ia;
                         }
                     }
