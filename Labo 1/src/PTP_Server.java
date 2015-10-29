@@ -25,7 +25,7 @@ public class PTP_Server {
                 try {
                     // Set-up du socket multicast pour l'envoi
                     System.out.println("STARTING MULTICAST THREAD...");
-                    InetAddress server = IneAddress.getByName(PTP_Shared.MULTICAST_IP);
+                    InetAddress server = InetAddress.getByName(PTP_Shared.MULTICAST_IP);
                     MulticastSocket socket = new MulticastSocket(PTP_Shared.MULTICAST_SERVER_PORT);
                 
                     // Boucle principale du thread

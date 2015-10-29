@@ -17,7 +17,7 @@ public class PTP_Client {
         }
         
         String serverIP = args[0];*/
-        InetAddress server = InetAddress.getByName(PTP_Shared.MULTICAST_IP);
+        InetAddress groupe = InetAddress.getByName(PTP_Shared.MULTICAST_IP);
         
         boolean end = false;
         
@@ -26,6 +26,7 @@ public class PTP_Client {
                 // Initialisation des variables
                 byte[] buffer;
                 DatagramPacket packet;
+                InetAddress server;
                 int sync_id, delay_id;
                 long sync_receive_time, sync_emit_time, delay_request_time, delay_response_time;
                 long offset = 0;
@@ -34,7 +35,7 @@ public class PTP_Client {
                 
                 try {
                     MulticastSocket multi_socket = new MulticastSocket(PTP_Shared.MULTICAST_CLIENT_PORT);
-                    multi_socket.joinGroup(server);
+                    multi_socket.joinGroup(groupe);
                     // Set-up du socket pour l'envoi et la récéption de messages de delay
                     DatagramSocket delay_socket = new DatagramSocket(PTP_Shared.CLIENT_PORT);
                     
@@ -75,6 +76,7 @@ public class PTP_Client {
                         System.out.println("Received ID " + sync_id + " FOLLOW_UP message");
                         sync_emit_time = PTP_Shared.getMessageTime(packet.getData());
                         offset = sync_receive_time - sync_emit_time;
+                        server = packet.getAddress();
                         System.out.println("Calculated new offset of " + offset + "ms");
                         
                         // On ferme le socket, on ne veut pas recevoir d'autres messages avant de finir
@@ -118,6 +120,7 @@ public class PTP_Client {
                         System.out.println("-- Current time is " + adj + " after adjusting");
                     }
                     
+                    multi_socket.leaveGroup(groupe);
                     multi_socket.close();
                     delay_socket.close();
                     
