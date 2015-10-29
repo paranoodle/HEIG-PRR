@@ -85,7 +85,7 @@ public class PTP_Client {
                         
                         // On attend avant d'envoyer le message DELAY_REQUEST
                         // TODO: mettre les vraies valeurs
-                        Thread.sleep((int)(Math.random() * 56 + 4) * PTP_Shared.MULTICAST_DELAY);
+                        Thread.sleep((int)(Math.random() * (PTP_Shared.UPPERBOUND - PTP_Shared.LOWERBOUND) + PTP_Shared.LOWERBOUND) *PTP_Shared.MULTICAST_DELAY);
                         delay_id = (int)(Math.random() * 1000);
                         
                         // Envoi de DELAY_REQUEST avec notre id
