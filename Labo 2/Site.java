@@ -59,8 +59,10 @@ public class Site {
     private InetAddress[] neighborIPs;
     private int[] neighborPorts;
     
-    // socket pour l'envoi et la récéption des packets
+    // socket pour l'envoi et la récéption des packets entre les sites
     private DatagramSocket socket;
+    // socket pour l'envoi et la récéption des packets avec l'application
+    private DatagramSocket localSocket;
     
     // sommes-nous en attente de la section critique: oui/non
     private boolean csDemand = false;
@@ -75,7 +77,8 @@ public class Site {
     private int newPort;
     
     // Thread sur lequel tourne la récéption de messages
-    private Thread messageThread;
+    private Thread siteThread;
+    private Thread appThread;
     private boolean end = false;
     
     /* 
@@ -83,11 +86,12 @@ public class Site {
     * ainsi que la liste des IP et des ports des autres sites partageant la donnée.
     * Démarre le thread de récéption des messages.
     */
-    public Site(int name, DatagramSocket socket, InetAddress[] sites, int[] ports) {
+    public Site(int name, DatagramSocket socket, DatagramSocket local, InetAddress[] sites, int[] ports) {
         this.name = name;
         N = sites.length;
         
         this.socket = socket;
+        localSocket = local;
                 
         neighborIPs = sites;
         neighborPorts = ports;
@@ -95,7 +99,7 @@ public class Site {
         System.out.println("Initialized new site\nName: " + name);
         
         // Thread qui reçoit les messages et les traites
-        messageThread = new Thread() {
+        siteThread = new Thread() {
             public void run() {
                 try {
                     while (!end) {
@@ -107,17 +111,41 @@ public class Site {
                         
                         int port = packet.getPort();
                         
-                        System.out.println(time + ": Message received from " + packet.getAddress() + ":" + port);
+                        System.out.println(time + ": Message received from site " + packet.getAddress() + ":" + port);
                         
                         byte type = Shared.getMessageType(packet.getData());
                         if (type == Shared.SITE_REQUEST) {
                             receiveRequest(packet);
                         } else if (type == Shared.SITE_REPLY) {
                             receiveReply(packet);
-                        } else if (type == Shared.READ_REQUEST) {
+                        }
+                    }
+                    socket.close();
+                } catch (Exception e) {
+                    System.out.println("ERROR IN SITE THREAD");
+                    e.printStackTrace();
+                    System.exit(-1);
+                }
+            }
+        };
+        
+        appThread = new Thread() {
+            public void run() {
+                try {
+                    while (!end) {
+                        byte[] buffer = new byte[Shared.APP_MESSAGE_SIZE];
+                        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+                        
+                        localSocket.receive(packet);
+                        int port = packet.getPort();
+                        
+                        System.out.println(time + ": Message received from application at port " + port);
+                        
+                        byte type = Shared.getMessageType(packet.getData());
+                        if (type == Shared.READ_REQUEST) {
                             // Si on reçoit une requête de lecture, on renvoie la valeur courante
                             System.out.println("-- Sending current shared value to application: " + sharedVar);
-                            socket.send(new DatagramPacket(Shared.makeAppMessage(Shared.READ_REPLY, sharedVar),
+                            localSocket.send(new DatagramPacket(Shared.makeAppMessage(Shared.READ_REPLY, sharedVar),
                                         Shared.APP_MESSAGE_SIZE, InetAddress.getLocalHost(), port));
                         } else if (type == Shared.WRITE_REQUEST) {
                             // Si on reçoit une requête d'écriture, on notifie les autres sites
@@ -131,16 +159,17 @@ public class Site {
                             }
                         }
                     }
-                    socket.close();
+                    localSocket.close();
                 } catch (Exception e) {
-                    System.out.println("ERROR IN MAIN THREAD");
+                    System.out.println("ERROR IN APP THREAD");
                     e.printStackTrace();
                     System.exit(-1);
                 }
             }
         };
         
-        messageThread.start();
+        siteThread.start();
+        appThread.start();
     }
     
     // Méthode qui gère la récéption des messages REQUEST
@@ -189,7 +218,7 @@ public class Site {
                 varTime = time;
                 
                 try {
-                    socket.send(new DatagramPacket(Shared.makeAppMessage(Shared.WRITE_REPLY, sharedVar),
+                    localSocket.send(new DatagramPacket(Shared.makeAppMessage(Shared.WRITE_REPLY, sharedVar),
                                 Shared.APP_MESSAGE_SIZE, InetAddress.getLocalHost(), newPort));
                 } catch (Exception e) {
                     System.out.println("Error: failed to send updated value to application");
@@ -253,19 +282,31 @@ public class Site {
         
         try {
             BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
-            System.out.println("Please enter site IP and port, or only port if working locally:");
+            System.out.println("Please enter site IP and port for site communication, or only port if working locally:");
             String s = input.readLine();
             
             DatagramSocket socket;
             
             if (s.contains(".")) {
-                String[] split = input.readLine().split(":");
+                System.out.println(s);
+                String[] split = s.split(":");
                 socket = new DatagramSocket(null);
-                socket.bind(new InetSocketAddress(InetAddress.getByName(split[0]),
-                                Integer.parseInt(split[1])));
+                InetSocketAddress address = new InetSocketAddress(InetAddress.getByName(split[0]),
+                                                Integer.parseInt(split[1]));
+                if (address.isUnresolved()) {
+                    System.out.println("wtf");
+                } else {
+                    socket.bind(address);
+                    System.out.println("???");
+                }
             } else {
                 socket = new DatagramSocket(Integer.parseInt(s));
             }
+            
+            System.out.println("Please enter site socket for communication with applications");
+            s = input.readLine();
+            
+            DatagramSocket local = new DatagramSocket(Integer.parseInt(s));
             
             for (int i=0; i < args.length; i++) {
                 if (args[i].contains(".")) {
@@ -280,7 +321,7 @@ public class Site {
                 }
             }
             
-            Site site = new Site((int)(Math.random() * Integer.MAX_VALUE), socket, sites, ports);
+            Site site = new Site((int)(Math.random() * Integer.MAX_VALUE), socket, local, sites, ports);
             
         } catch (Exception e) {
             System.out.println("Failed to read site IPs");
