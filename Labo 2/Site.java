@@ -9,12 +9,15 @@ import java.util.*;
 *
 * Le code est lancé avec en arguments les IP et ports des autres sites, sous la forme
 * IP:PORT (p.ex: 228.5.6.7:4444) ou juste PORT (p.ex: 4444) si on travaille sur localhost
-* Exemple: java Site 4445 4446 4447
+* Exemples: java Site 4445 4446 4447
+*           java Site 192.164.0.1:4445
 *
-* Une fois le programme lancé, il sera demandé quel port utiliser pour ce site-ci.
+* Une fois le programme lancé, il sera demandé quel port et IP utiliser pour ce site-ci,
+* avec le même format que précédemment. Si on travaille sur localhost, seul le port est necéssaire.
 * Ceci est fait pour éviter les conflits de ports si plusieurs sites sont sur une même machine.
 *
 * Lorsque le programme tourne, on peut recevoir 4 types de messages:
+* Sur le thread acceptant les packets externes:
 * - SITE_REQUEST (reçu d'un autre site):
 *       Contient une estampille logique et le nom du site émétteur, et
 *       correspond à une demande d'accès à la section critique. A sa récéption,
@@ -30,6 +33,7 @@ import java.util.*;
 *       modifie la variable partagée, puis on envoie un message SITE_REPLY à tous les sites
 *       pour les tenir au courant de la nouvelle valeur et du fait que la section critique
 *       est maintenant libre.
+* Sur le thread acceptant les packets locaux:
 * - READ_REQUEST (reçu d'une application):
 *       Message vide autre que son entête, qui demande simplement la valeur courante de la
 *       variable partagée. On revoie un message READ_REPLY à l'application, contenant la
@@ -76,15 +80,17 @@ public class Site {
     // port de l'application qui a demandé l'entrée en section critique
     private int newPort;
     
-    // Thread sur lequel tourne la récéption de messages
+    // Thread sur lequel tourne la récéption de messages d'autres sites
     private Thread siteThread;
+    // Thread sur lequel tourne la récéption de messages des applications
     private Thread appThread;
     private boolean end = false;
     
     /* 
-    * Constructeur du site, nécéssite un identifiant, le port sur lequel il travaille,
+    * Constructeur du site, nécéssite un identifiant, le socket pour communiquer avec
+    * les autres sites, le socket pour communiquer avec les applications,
     * ainsi que la liste des IP et des ports des autres sites partageant la donnée.
-    * Démarre le thread de récéption des messages.
+    * Démarre les deux threads de récéption de messages.
     */
     public Site(int name, DatagramSocket socket, DatagramSocket local, InetAddress[] sites, int[] ports) {
         this.name = name;
@@ -136,6 +142,7 @@ public class Site {
                         byte[] buffer = new byte[Shared.APP_MESSAGE_SIZE];
                         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                         
+                        // On est en attente d'un message
                         localSocket.receive(packet);
                         int port = packet.getPort();
                         
@@ -210,14 +217,18 @@ public class Site {
             
             time = Math.max(time, messageTime) + 1;
             
+            // Si on a reçu la permission de tous les autres sites, on entre en section critique
             if (csDemand && --waitingFor == 0) {
                 System.out.println(time + ": Entering critical section, " + 
                                     "current shared variable value: " + sharedVar);
                 
+                // On modifie la valeur de la variable partagée et on met à jour l'heure de sa modification
                 sharedVar = newVar;
                 varTime = time;
                 
                 try {
+                    // On renvoie un message WRITE_REPLY à l'application qui avait demandé l'accès
+                    // à la section critique
                     localSocket.send(new DatagramPacket(Shared.makeAppMessage(Shared.WRITE_REPLY, sharedVar),
                                 Shared.APP_MESSAGE_SIZE, InetAddress.getLocalHost(), newPort));
                 } catch (Exception e) {
@@ -228,6 +239,8 @@ public class Site {
                 System.out.println(time + ": Exiting critical section, " +
                                     "new shared variable value: " + sharedVar);
                 
+                // On envoie des messages SITE_REPLY à tous les sites pour leur informer de notre sortie
+                // de la section critique
                 for (int i=0; i < N; i++) {
                     sendReply(neighborIPs[i], neighborPorts[i]);
                 }
@@ -294,10 +307,10 @@ public class Site {
                 InetSocketAddress address = new InetSocketAddress(InetAddress.getByName(split[0]),
                                                 Integer.parseInt(split[1]));
                 if (address.isUnresolved()) {
-                    System.out.println("wtf");
+                    System.out.println("Error: cannot resolve address");
+                    return;
                 } else {
                     socket.bind(address);
-                    System.out.println("???");
                 }
             } else {
                 socket = new DatagramSocket(Integer.parseInt(s));
@@ -321,6 +334,8 @@ public class Site {
                 }
             }
             
+            // On initialise le site avec un nom aléatoire, les sockets pour communiquer avec les sites
+            // et les applications, puis la liste des sites et des ports qui partageant la donnée
             Site site = new Site((int)(Math.random() * Integer.MAX_VALUE), socket, local, sites, ports);
             
         } catch (Exception e) {

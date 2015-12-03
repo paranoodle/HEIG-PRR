@@ -75,7 +75,13 @@ public class Application {
                     
                     byte[] data = packet.getData();
                     if (Shared.getMessageType(data) == Shared.WRITE_REPLY) {
-                        System.out.println("Shared variable was updated, new value is: " + Shared.getMessageValue(data));
+                        int response = Shared.getMessageValue(data);
+                        if (value == response) {
+                            System.out.println("Shared variable was updated correctly");
+                        } else {
+                            System.out.println("Shared variable was not updated correctly");
+                        }
+                        System.out.println("New value is: " + response);
                     }
                 } else {
                     System.out.println("Instruction not recognized");
