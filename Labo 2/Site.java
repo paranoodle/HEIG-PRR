@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.*;
 import java.lang.*;
 import java.util.*;
+import java.util.concurrent.Semaphore;
 
 /*
 * Eléonore d'Agostino et Karim Ghozlani
@@ -51,7 +52,7 @@ import java.util.*;
 *       la variable, puis on envoie un message WRITE_REPLY à l'application ayant demandé
 *       la modification.
 *
-* Si les outputs console commencent par un nombre, ceci correspond au temps courant
+* Les outputs console commencent par un nombre correspondant au temps courant
 * de l'horloge logique du site.
 */
 public class Site {
@@ -82,6 +83,8 @@ public class Site {
     private int csTime = 0;
     // nombre de sites dont on attend encore les messages REPLY
     private int waitingFor = 0;
+    // semaphore pour assurer que deux applications ne puissent pas write en même temps
+    private Semaphore semaphore = new Semaphore(1);
     
     // nouvelle valeur de la variable qui remplacera la vieille quand on entre en section critique
     private int newVar;
@@ -159,19 +162,16 @@ public class Site {
                         byte type = Shared.getMessageType(packet.getData());
                         if (type == Shared.READ_REQUEST) {
                             // Si on reçoit une requête de lecture, on renvoie la valeur courante
-                            System.out.println("-- Sending current shared value to application: " + sharedVar);
+                            System.out.println(time + ": Sending current shared value to application: " + sharedVar);
                             localSocket.send(new DatagramPacket(Shared.makeAppMessage(Shared.READ_REPLY, sharedVar),
                                         Shared.APP_MESSAGE_SIZE, InetAddress.getLocalHost(), port));
                         } else if (type == Shared.WRITE_REQUEST) {
                             // Si on reçoit une requête d'écriture, on notifie les autres sites
-                            if (!csDemand) {
-                                System.out.println("-- Acquiring critical section access for application");
-                                newVar = Shared.getMessageValue(packet.getData());
-                                newPort = port;
-                                sendRequests();
-                            } else {
-                                System.out.println("Critical section has already been requested by another application on this site");
-                            }
+                            System.out.println(time + ": Attempting to acquire critical section access for application");
+                            semaphore.acquire();
+                            newVar = Shared.getMessageValue(packet.getData());
+                            newPort = port;
+                            sendRequests();
                         }
                     }
                     localSocket.close();
@@ -234,6 +234,12 @@ public class Site {
                 sharedVar = newVar;
                 varTime = time;
                 
+                csDemand = false;
+                semaphore.release();
+                
+                System.out.println(time + ": Exiting critical section, " +
+                                    "new shared variable value: " + sharedVar);
+                
                 try {
                     // On renvoie un message WRITE_REPLY à l'application qui avait demandé l'accès
                     // à la section critique
@@ -242,10 +248,6 @@ public class Site {
                 } catch (Exception e) {
                     System.out.println("Error: failed to send updated value to application");
                 }
-                
-                csDemand = false;
-                System.out.println(time + ": Exiting critical section, " +
-                                    "new shared variable value: " + sharedVar);
                 
                 // On envoie des messages SITE_REPLY à tous les sites pour leur informer de notre sortie
                 // de la section critique
