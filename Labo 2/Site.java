@@ -83,23 +83,16 @@ public class Site {
     * ainsi que la liste des IP et des ports des autres sites partageant la donnée.
     * Démarre le thread de récéption des messages.
     */
-    public Site(int name, int port, InetAddress[] sites, int[] ports) {
+    public Site(int name, DatagramSocket socket, InetAddress[] sites, int[] ports) {
         this.name = name;
         N = sites.length;
+        
+        this.socket = socket;
                 
         neighborIPs = sites;
         neighborPorts = ports;
         
-        try {
-            socket = new DatagramSocket(port);
-        } catch (Exception e) {
-            System.out.println("ERROR: Failed to create socket");
-            e.printStackTrace();
-            System.exit(-1);
-        }
-        
-        System.out.println("Initialized new site\nName: " + name +
-                            "\nPort: " + port);
+        System.out.println("Initialized new site\nName: " + name);
         
         // Thread qui reçoit les messages et les traites
         messageThread = new Thread() {
@@ -257,12 +250,22 @@ public class Site {
         
         InetAddress[] sites = new InetAddress[args.length];
         int[] ports = new int[args.length];
-        int sitePort;
         
         try {
             BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
-            System.out.println("Please enter site port:");
-            sitePort = Integer.parseInt(input.readLine());
+            System.out.println("Please enter site IP and port, or only port if working locally:");
+            String s = input.readLine();
+            
+            DatagramSocket socket;
+            
+            if (s.contains(".")) {
+                String[] split = input.readLine().split(":");
+                socket = new DatagramSocket(null);
+                socket.bind(new InetSocketAddress(InetAddress.getByName(split[0]),
+                                Integer.parseInt(split[1])));
+            } else {
+                socket = new DatagramSocket(Integer.parseInt(s));
+            }
             
             for (int i=0; i < args.length; i++) {
                 if (args[i].contains(".")) {
@@ -276,12 +279,12 @@ public class Site {
                     ports[i] = Integer.parseInt(args[i]);
                 }
             }
+            
+            Site site = new Site((int)(Math.random() * Integer.MAX_VALUE), socket, sites, ports);
+            
         } catch (Exception e) {
             System.out.println("Failed to read site IPs");
             e.printStackTrace();
-            return;
         }
-        
-        Site site = new Site((int)(Math.random() * Integer.MAX_VALUE), sitePort, sites, ports);
     }
 }
