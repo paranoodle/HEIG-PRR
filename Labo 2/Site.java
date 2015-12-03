@@ -4,6 +4,8 @@ import java.lang.*;
 import java.util.*;
 
 /*
+* Eléonore d'Agostino et Karim Ghozlani
+*
 * Cette classe symbolise un site pour gérer la cohérence d'une variable partagée,
 * dans notre cas un entier.
 *
@@ -17,23 +19,26 @@ import java.util.*;
 * Ceci est fait pour éviter les conflits de ports si plusieurs sites sont sur une même machine.
 *
 * Lorsque le programme tourne, on peut recevoir 4 types de messages:
-* Sur le thread acceptant les packets externes:
+*
+* Sur le thread acceptant les paquets externes:
 * - SITE_REQUEST (reçu d'un autre site):
-*       Contient une estampille logique et le nom du site émétteur, et
-*       correspond à une demande d'accès à la section critique. A sa récéption,
+*       Contient une estampille logique et le nom du site émetteur, et
+*       correspond à une demande d'accès à la section critique. A sa réception,
 *       on renvoie un message SITE_REPLY si on ne cherche pas à entrer en section critique,
 *       ou si l'estampille est plus vieille que celle de notre demande.
 * - SITE_REPLY (reçu d'un autre site):
-*       Contient une estampille logique, le nom du site émétteur, et la valeur courante
+*       Contient une estampille logique, le nom du site émetteur, et la valeur courante
 *       de la variable partagée sur ce site. A sa récéption, on met à jour la valeur de la
 *       variable courante si son estampille est plus récente que la dernière mise à jour de
-*       la variable courante. Puis, si on est en attente de la section critique, on
+*       la variable courante.
+*       Puis, si on est en attente de la section critique, on
 *       décrémente le nombre de site dont on attend encore une réponse.
 *       Si on a reçu une réponse de tous les sites, on entre en section critique et on
 *       modifie la variable partagée, puis on envoie un message SITE_REPLY à tous les sites
 *       pour les tenir au courant de la nouvelle valeur et du fait que la section critique
 *       est maintenant libre.
-* Sur le thread acceptant les packets locaux:
+*
+* Sur le thread acceptant les paquets locaux:
 * - READ_REQUEST (reçu d'une application):
 *       Message vide autre que son entête, qui demande simplement la valeur courante de la
 *       variable partagée. On revoie un message READ_REPLY à l'application, contenant la
@@ -45,6 +50,9 @@ import java.util.*;
 *       pour tenter d'entrer en section critique. Une fois en section critique, on modifie
 *       la variable, puis on envoie un message WRITE_REPLY à l'application ayant demandé
 *       la modification.
+*
+* Si les outputs console commencent par un nombre, ceci correspond au temps courant
+* de l'horloge logique du site.
 */
 public class Site {
     // nombre de sites partageant la donnée
@@ -63,9 +71,9 @@ public class Site {
     private InetAddress[] neighborIPs;
     private int[] neighborPorts;
     
-    // socket pour l'envoi et la récéption des packets entre les sites
+    // socket pour l'envoi et la récéption des paquets entre les sites
     private DatagramSocket socket;
-    // socket pour l'envoi et la récéption des packets avec l'application
+    // socket pour l'envoi et la récéption des paquets avec l'application
     private DatagramSocket localSocket;
     
     // sommes-nous en attente de la section critique: oui/non
@@ -328,7 +336,7 @@ public class Site {
                     sites[i] = InetAddress.getByName(split[0]);
                     ports[i] = Integer.parseInt(split[1]);
                 } else {
-                    // on a que le port, donc on travaille sur localhost
+                    // on n'a que le port, donc on travaille sur localhost
                     sites[i] = InetAddress.getLocalHost();
                     ports[i] = Integer.parseInt(args[i]);
                 }

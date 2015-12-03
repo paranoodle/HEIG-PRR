@@ -3,10 +3,12 @@ import java.net.*;
 import java.io.*;
 
 /*
+* Eléonore d'Agostino et Karim Ghozlani
+*
 * Cette classe correspond à une application qui voudrait pouvoir accéder à une
 * variable partagée gérée par un des sites.
 *
-* Le code est lancé avec en argument le port utilisé par l'application, suivi du
+* Le programme est lancé avec en argument le port utilisé par l'application, suivi du
 * port du site que l'on souhaite utiliser. On part du principe que tous les sites
 * ont été lancés avant de lancer une des applications.
 * Exemple: java Application 4444 4446
@@ -20,7 +22,7 @@ import java.io.*;
 *       envoie une requête WRITE_REQUEST contenant cette nouvelle valeur à son site associé,
 *       puis attend un message WRITE_REPLY qui contient à nouveau cette même valeur.
 *
-* N'importe-quelle autre instruction sera ignorée, mais la case n'est pas prise en compte.
+* N'importe quelle autre instruction sera ignorée, mais la casse n'est pas prise en compte.
 */
 public class Application {
     public static void main(String[] args) {

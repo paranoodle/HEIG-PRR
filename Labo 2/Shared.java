@@ -1,6 +1,8 @@
 import java.nio.ByteBuffer;
 
 /*
+* Eléonore d'Agostino et Karim Ghozlani
+*
 * Structure d'un message SITE_REQUEST:
 *       type SITE_REQUEST (byte), estampille logique (int), nom du site (int)
 *
@@ -22,25 +24,28 @@ import java.nio.ByteBuffer;
 */
 
 public class Shared {
-    // les deux types de messages pour les sites
+    // Les deux types de messages pour les sites
     public static final byte SITE_REQUEST = 0;
     public static final byte SITE_REPLY = 1;
     
-    // les quatres types de messages pour les applications
+    // Les quatres types de messages pour les applications
     public static final byte READ_REQUEST = 2;
     public static final byte READ_REPLY = 3;
     public static final byte WRITE_REQUEST = 4;
     public static final byte WRITE_REPLY = 5;
     
-    // type + time + name =
-    // byte + int +  int  = 9 bytes
+    // type + time + name = byte + int + int = 9 bytes
     public static final int SITE_REQUEST_SIZE = 9;
-    // type + time + name + value =
-    // byte + int +  int  + int   = 13 bytes
+    // type + time + name + value = byte + int + int + int = 13 bytes
     public static final int SITE_REPLY_SIZE = 13;
-    // type + value =
-    // byte + int   = 5 bytes
+    // type + value = byte + int = 5 bytes
     public static final int APP_MESSAGE_SIZE = 5;
+    
+    // Offsets pour la lecture des bytes d'un message
+    public static final int TIME_OFFSET = 1;
+    public static final int SENDER_OFFSET = TIME_OFFSET + 4;
+    public static final int SITE_VALUE_OFFSET = SENDER_OFFSET + 4;
+    public static final int APP_VALUE_OFFSET = 1;
     
     // Génère un byte[] contenant un message SITE_REQUEST
     public static byte[] makeSiteRequest(int time, int name) {
@@ -79,7 +84,7 @@ public class Shared {
     // ou -1 si on tente d'ouvrir le mauvais type de message
     public static int getMessageTime(byte[] array) {
         if (array[0] == SITE_REQUEST || array[0] == SITE_REPLY) {
-            return ByteBuffer.wrap(array).getInt(1);
+            return ByteBuffer.wrap(array).getInt(TIME_OFFSET);
         } else {
             System.out.println("Error: message does not contain timestamp");
             return -1;
@@ -90,7 +95,7 @@ public class Shared {
     // ou -1 si on tente d'ouvrir le mauvais type de message
     public static int getMessageSender(byte[] array) {
         if (array[0] == SITE_REQUEST || array[0] == SITE_REPLY) {
-            return ByteBuffer.wrap(array).getInt(1 + 4);
+            return ByteBuffer.wrap(array).getInt(SENDER_OFFSET);
         } else {
             System.out.println("Error: message does not contain sender");
             return -1;
@@ -101,9 +106,9 @@ public class Shared {
     // ou -1 si on tente d'ouvrir le mauvais type de message
     public static int getMessageValue(byte[] array) {
         if (array[0] == SITE_REPLY) {
-            return ByteBuffer.wrap(array).getInt(1 + 4 + 4);
+            return ByteBuffer.wrap(array).getInt(SITE_VALUE_OFFSET);
         } else if (array[0] >= READ_REPLY && array[0] <= WRITE_REPLY) {
-            return ByteBuffer.wrap(array).getInt(1);
+            return ByteBuffer.wrap(array).getInt(APP_VALUE_OFFSET);
         } else {
             System.out.println("Error: Message does not contain value");
             return -1;
