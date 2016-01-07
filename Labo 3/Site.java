@@ -122,31 +122,42 @@ public class Site {
     public byte getWinner() {
         if (resultPhase && winner != -1) {
             // L'élection précédente s'est terminée et on a un élu valide
-            System.out.println("Keeping previous winner");
+            System.out.println("Sending current known winner");
             return winner;
         } else {
             try {
-                // On démarre une nouvelle élection
-                startElection();
+                new Thread() {
+                    public void run() {
+                        try {
+                            // On démarre une nouvelle élection
+                            startElection();
+                        } catch (Exception e) {
+                            System.out.println("Error with election start");
+                        }
+                    }
+                }.start();
+                
+                System.out.println("Waiting for result...");
             
                 // On utilise synchronized pour pouvoir réveiller
                 // appThread lorsqu'on a trouvé l'élu
                 synchronized(appThread) {
                     appThread.wait(Config.ELECTION_TIMEOUT);
-                    System.out.println("!!!!! WAKEY WAKEY !!!!!!!!");
-                    if (election) {
-                        // Si une élection est en cours mais qu'appThread
-                        // s'est réveillé, on a trop attendu
-                        System.out.println("Election timed out");
-                        throw new Exception(">:(");
-                    } else {
-                        // appThread a été réveillé à temps
-                        System.out.println("Obtained winner!");
-                        // On rappelle getWinner pour vérifier que l'élu est valide
-                        return getWinner();
-                    }
+                }
+                
+                if (election) {
+                    // Si une élection est en cours mais qu'appThread
+                    // s'est réveillé, on a trop attendu
+                    System.out.println("Election timed out");
+                    throw new Exception(">:(");
+                } else {
+                    // appThread a été réveillé à temps
+                    System.out.println("Obtained winner!");
+                    // On rappelle getWinner pour vérifier que l'élu est valide
+                    return getWinner();
                 }
             } catch (Exception e) {
+                election = false;
                 System.out.println("Unable to obtain winner");
                 e.printStackTrace();
                 return -1;
@@ -171,16 +182,16 @@ public class Site {
     
     // Finalize une élection
     private void endElection() {
-        synchronized(appThread) {
-            System.out.println("Election over!");
-            election = false;
+        System.out.println("Election over!");
+        election = false;
             
+        synchronized(appThread) {
             // On réveille l'application si elle est en attente
             appThread.notify();
         }
     }
     
-    // Gère la récéption de messages ANNONCE
+    // Gère la réception de messages ANNONCE
     private void receiveAnnonce(DatagramPacket packet) throws Exception {
         AnnonceMessage message = new AnnonceMessage(packet.getData());
         System.out.println("Received message: " + message);
@@ -228,8 +239,6 @@ public class Site {
             resultPhase = true;
             send(new ResultMessage(winner, sites),
                     packet.getAddress(), packet.getPort());
-        } else {
-            endElection();
         }
     }
     
@@ -268,16 +277,18 @@ public class Site {
             receiptSocket.setSoTimeout(Config.RECEIPT_TIMEOUT);
             receiptSocket.receive(packet);
         } catch (SocketTimeoutException e) {
-            // Le reçu n'est pas arrivé à temps
-            System.out.println("Switching to next site");
-            // On change qui est le prochain site dans l'anneau
-            next = (byte)((next + 1) % Config.SITE_COUNT);
-            if (next == 0) {
-                System.out.println("Looped around ring");
-                next = 1;
+            if (election) {
+                // Le reçu n'est pas arrivé à temps
+                System.out.println("Switching to next site");
+                // On change qui est le prochain site dans l'anneau
+                next = (byte)((next + 1) % Config.SITE_COUNT);
+                if (next == 0) {
+                    System.out.println("Looped around ring");
+                    next = 1;
+                }
+                
+                send(message);
             }
-            
-            send(message);
         }
         
         if (Message.getType(packet.getData()) == Message.RECEIPT) {
