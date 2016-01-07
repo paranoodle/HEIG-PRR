@@ -199,6 +199,7 @@ public class Site {
         Map<Byte,Integer> apt = message.getAptitudes();
         
         if (apt.containsKey(name)) {
+            winner = 0;
             for (Map.Entry e: apt.entrySet()) {
                 if (((int) e.getValue()) > apt.get(winner)) {
                     winner = (byte) e.getKey();
@@ -277,18 +278,18 @@ public class Site {
             receiptSocket.setSoTimeout(Config.RECEIPT_TIMEOUT);
             receiptSocket.receive(packet);
         } catch (SocketTimeoutException e) {
-            if (election) {
-                // Le reçu n'est pas arrivé à temps
-                System.out.println("Switching to next site");
-                // On change qui est le prochain site dans l'anneau
-                next = (byte)((next + 1) % Config.SITE_COUNT);
-                if (next == 0) {
-                    System.out.println("Looped around ring");
-                    next = 1;
-                }
-                
-                send(message);
+            //if (election) {
+            // Le reçu n'est pas arrivé à temps
+            System.out.println("Switching to next site");
+            // On change qui est le prochain site dans l'anneau
+            next = (byte)((next + 1) % Config.SITE_COUNT);
+            if (next == 0) {
+                System.out.println("Looped around ring");
+                next = 1;
             }
+            
+            send(message);
+            //}
         }
         
         if (Message.getType(packet.getData()) == Message.RECEIPT) {
