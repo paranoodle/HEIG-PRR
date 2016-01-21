@@ -11,13 +11,25 @@ import java.rmi.registry.*;
  * Elle communique avec un site pour envoyer et recevoir des messages.
  */
 public class Application extends UnicastRemoteObject implements IApplication {
-    public Application() throws RemoteException {}
+    public Application(int name) throws Exception {
+        // On crée le registre s'il n'existe pas dejà
+        try {
+            LocateRegistry.createRegistry(Config.REGISTRY_PORT);
+            System.out.println("Created new RMI registry");
+        } catch (RemoteException e) {
+            System.out.println("RMI registry already exists");
+        }
+        
+        // On inscrit l'application au registre RMI
+        Naming.rebind(Config.getApp(name), this);
+    }
     
     // Reçois un message textuel et l'affiche
     public void receiveMessage(String message) throws RemoteException {
         System.out.println(message);
     }
     
+    // Crée une application et contient la boucle principale
     public static void main(String[] args) throws Exception {
         if (args.length != 1) {
             System.out.println("Please launch with app name (0-" + (Config.SITE_COUNT - 1) + ")");
@@ -25,17 +37,9 @@ public class Application extends UnicastRemoteObject implements IApplication {
         }
         
         int name = Integer.parseInt(args[0]);
+        Application app = new Application(name);
         
-        try {
-            LocateRegistry.createRegistry(Config.REGISTRY_PORT);
-            System.out.println("Created new RMI registry");
-        } catch (RemoteException e) {
-            System.out.println("RMI registry already exists");
-        }
-            
-        Application app = new Application();
-        Naming.rebind(Config.getApp(name), app);
-        
+        // On envoie au site associé les messages entrés dans le terminal
         ISite site = (ISite) Naming.lookup(Config.getSite(name));
         Scanner in = new Scanner(System.in);
         while (true) {

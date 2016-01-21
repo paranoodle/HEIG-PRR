@@ -22,10 +22,21 @@ public class Site extends UnicastRemoteObject implements ISite {
     // Map des ID connus du site
     private Map<Long,Integer> known_ids = new HashMap<>();
     
-    public Site(int i) throws RemoteException {
+    public Site(int i) throws Exception {
         name = i;
         neighbors = Config.TOPOLOGY[i];
         currentId = name;
+        
+        // On crée le registre s'il n'existe pas dejà
+        try {
+            LocateRegistry.createRegistry(Config.REGISTRY_PORT);
+            System.out.println("Created new RMI registry");
+        } catch (RemoteException e) {
+            System.out.println("RMI registry already exists");
+        }
+        
+        // On inscrit le site au registre RMI
+        Naming.rebind(Config.getSite(name), this);
     }
     
     // Envoie un message aux autres sites après lui avoir rajouté un ID unique.
@@ -73,11 +84,7 @@ public class Site extends UnicastRemoteObject implements ISite {
         System.out.println("Received probe from " + sender + " with id " + id);
         
         if (known_ids.containsKey(id)) {
-            // On décrémente/enlève l'ID
-            int count = known_ids.remove(id);
-            if (count > 1) {
-                known_ids.put(id, count - 1);
-            }
+            decrement(id);
         } else {
             // On ajoute l'ID à la liste des ID connus
             known_ids.put(id, neighbors.length - 1);
@@ -122,6 +129,10 @@ public class Site extends UnicastRemoteObject implements ISite {
     // Reçois un écho contenant le site émetteur et l'ID du message
     public void receiveEcho(int sender, long id) throws RemoteException {
         System.out.println("Received echo from " + sender + " for " + id);
+        decrement(id);
+    }
+    
+    private void decrement(long id) {
         // On décrémente/enlève l'ID
         int count = known_ids.remove(id);
         if (count > 1) {
@@ -129,7 +140,7 @@ public class Site extends UnicastRemoteObject implements ISite {
         }
     }
     
-    // Crée un site et l'inscrit au registre RMI
+    // Crée un site
     public static void main(String[] args) throws Exception {
         if (args.length != 1) {
             System.out.println("Please launch with site name (0-" + (Config.SITE_COUNT - 1) + ")");
@@ -137,17 +148,6 @@ public class Site extends UnicastRemoteObject implements ISite {
         }
         
         int name = Integer.parseInt(args[0]);
-        
-        // On crée le registre s'il n'existe pas dejà
-        try {
-            LocateRegistry.createRegistry(Config.REGISTRY_PORT);
-            System.out.println("Created new RMI registry");
-        } catch (RemoteException e) {
-            System.out.println("RMI registry already exists");
-        }
-        
-        // On crée le site et on l'inscrit au registre RMI
         Site site = new Site(name);
-        Naming.rebind(Config.getSite(name), site);
     }
 }
