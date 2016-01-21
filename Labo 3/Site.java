@@ -149,7 +149,9 @@ public class Site {
                     // Si une élection est en cours mais qu'appThread
                     // s'est réveillé, on a trop attendu
                     System.out.println("Election timed out");
-                    throw new Exception(">:(");
+                    election = false;
+                    System.out.println("Unable to obtain winner");
+                    return -1;
                 } else {
                     // appThread a été réveillé à temps
                     System.out.println("Obtained winner!");
@@ -278,7 +280,7 @@ public class Site {
             receiptSocket.setSoTimeout(Config.RECEIPT_TIMEOUT);
             receiptSocket.receive(packet);
         } catch (SocketTimeoutException e) {
-            //if (election) {
+            if (!election) return;
             // Le reçu n'est pas arrivé à temps
             System.out.println("Switching to next site");
             // On change qui est le prochain site dans l'anneau
@@ -289,7 +291,6 @@ public class Site {
             }
             
             send(message);
-            //}
         }
         
         if (Message.getType(packet.getData()) == Message.RECEIPT) {
@@ -343,7 +344,13 @@ class Application implements Runnable {
                 System.out.println("Press enter to display winner");
                 input.readLine();
                 
-                System.out.println("APP THREAD: The winner is site " + site.getWinner());
+                byte winner = site.getWinner();
+                
+                if (winner != -1) {
+                    System.out.println("APP THREAD: The winner is site " + winner);
+                } else {
+                    System.out.println("APP THREAD: Election failed");
+                }
             } catch (Exception e) {
                 System.out.println("EXCEPTION IN APP THREAD");
                 e.printStackTrace();
